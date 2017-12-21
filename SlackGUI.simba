@@ -1,0 +1,706 @@
+{$H-}
+{$I types.pas}
+{$I misc.pas}
+
+type
+  TSlackGUI = record
+    Width, Height: Int32;
+
+    Form: TForm;
+    Image: TImage;
+    Timer: TTimer;
+
+    FocusObject: TFormObject;
+    HoverObject: TFormObject;
+
+    ObjectCount: Int32;
+    Objects: array of TFormObject;
+
+    Images: array of record
+      Image: TBitmap;
+      Path: string;
+    end;
+  end;
+
+
+var
+  SlackGUI: TSlackGUI;
+  {$IFDEF CodeInSight}T:TCanvas;{$ENDIF}
+
+
+// -----------------------------------------------------------------------------
+// Default callbacks
+
+// NONE-SPECIFIC
+procedure TSlackGUI.OnMouseDown(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  if (Button = mbLeft) then Sender^.__IsHolding := True;
+  if (@Sender^.OnMouseDown <> nil) then Sender^.OnMouseDown(Sender, Button, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnMouseUp(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  if (Sender^.__IsHolding) and (Button = mbLeft) then
+  begin
+    Sender^.__IsHolding := False;
+    if (@Sender^.__OnClick <> nil) then Sender^.__OnClick(Sender);
+  end;
+
+  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnMouseMove(Sender: TFormObject; Shift: TShiftState; X,Y: Int32); static;
+begin
+  if (@Sender^.OnMouseMove <> nil) then Sender^.OnMouseMove(Sender, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnKeyDown(Sender: TFormObject; Key: Word; Shift: TShiftState); static;
+begin
+  if (@Sender^.OnKeyDown <> nil) then Sender^.OnKeyDown(Sender, Key, Shift);
+end;
+
+procedure TSlackGUI.OnKeyUp(Sender: TFormObject; Key: Word; Shift: TShiftState); static;
+begin
+  if (@Sender^.OnKeyUp <> nil) then Sender^.OnKeyUp(Sender, Key, Shift);
+end;
+
+procedure TSlackGUI.OnMouseEnter(Sender: TFormObject); static;
+begin
+  if (@Sender^.OnMouseEnter <> nil) then Sender^.OnMouseEnter(Sender);
+end;
+
+procedure TSlackGUI.OnMouseLeave(Sender: TFormObject); static;
+begin
+  if (@Sender^.OnMouseLeave <> nil) then Sender^.OnMouseLeave(Sender);
+end;
+
+procedure TSlackGUI.OnClick(Sender: TFormObject); static;
+begin
+  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender);
+end;
+
+
+// BUTTON
+procedure TSlackGUI.OnButtonEnter(Sender: TFormObject); static;
+begin
+  Swap(Sender^.Styles, Sender^.Styles2);
+  if (@Sender^.OnMouseEnter <> nil) then Sender^.OnMouseEnter(Sender);
+end;
+
+procedure TSlackGUI.OnButtonLeave(Sender: TFormObject); static;
+begin
+  Swap(Sender^.Styles, Sender^.Styles2);
+  if (@Sender^.OnMouseLeave <> nil) then Sender^.OnMouseLeave(Sender);
+end;
+
+
+// CHECKBOX
+procedure TSlackGUI.OnCheckboxEnter(Sender: TFormObject); static;
+begin
+  Swap(Sender^.Styles, Sender^.Styles2);
+  if (@Sender^.OnMouseEnter <> nil) then Sender^.OnMouseEnter(Sender);
+end;
+
+procedure TSlackGUI.OnCheckboxLeave(Sender: TFormObject); static;
+begin
+  Swap(Sender^.Styles, Sender^.Styles2);
+  if (@Sender^.OnMouseLeave <> nil) then Sender^.OnMouseLeave(Sender);
+end;
+
+procedure TSlackGUI.OnCheckboxClick(Sender: TFormObject); static;
+begin
+  TCheckboxObject(Sender)^.IsChecked := not TCheckboxObject(Sender)^.IsChecked;
+  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender);
+end;
+
+
+// DRAG WINDOW
+procedure TSlackGUI.OnDragWindowStart(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  TWndDragObject(Sender)^.IsDragging := True;
+  TWndDragObject(Sender)^.DragStartX := X;
+  TWndDragObject(Sender)^.DragStartY := Y;
+
+  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnDragWindow(Sender: TFormObject; Shift: TShiftState; X,Y: Int32); static;
+var
+  R: TRect;
+begin
+  with TWndDragObject(Sender)^ do
+    if IsDragging then
+    begin
+      R := SlackGUI.Form.GetBoundsRect;
+      R.Left   += X-DragStartX;
+      R.Top    += Y-DragStartY;
+      R.Right  += X-DragStartX;
+      R.Bottom += Y-DragStartY;
+      SlackGUI.Form.SetBoundsRect(R);
+    end;
+
+  if (@Sender^.OnMouseMove <> nil) then Sender^.OnMouseMove(Sender, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnDragWindowStop(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  TWndDragObject(Sender)^.IsDragging := False;
+  TWndDragObject(Sender)^.DragStartX := 0;
+  TWndDragObject(Sender)^.DragStartY := 0;
+
+  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
+end;
+
+
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// CREATE FORM OBJECT
+
+procedure InheritStyles(This, Parent: TFormObject);
+begin
+  Parent := Parent;
+  while (Parent <> nil) and (Parent^.Typ <> This^.Typ) do
+    Parent := Parent^.Parent;
+
+  if (Parent <> nil) then
+  begin
+    This^.Styles.Background  := Parent^.Styles.Background;
+    This^.Styles.BorderColor := Parent^.Styles.BorderColor;
+    This^.Styles.BorderSize  := Parent^.Styles.BorderSize;
+    This^.Styles.FontStyle := Parent^.Styles.FontStyle;
+    This^.Styles.FontColor := Parent^.Styles.FontColor;
+    This^.Styles.FontSize  := Parent^.Styles.FontSize;
+    This^.Styles.FontName  := Parent^.Styles.FontName;
+    This^.Styles.TextWrap  := Parent^.Styles.TextWrap;
+    This^.Styles.Overflow  := Parent^.Styles.Overflow;
+    This^.Styles.Align     := Parent^.Styles.Align;
+  end else
+    {load object dependant default styleset}
+end;
+
+procedure DefaultCallbacks(This: TFormObject);
+begin
+  This^.__OnMouseDown := @TSlackGUI.OnMouseDown;
+  This^.__OnMouseMove := @TSlackGUI.OnMouseMove;
+  This^.__OnMouseUp   := @TSlackGUI.OnMouseUp;
+  This^.__OnKeyDown   := @TSlackGUI.OnKeyDown;
+  This^.__OnKeyUp     := @TSlackGUI.OnKeyUp;
+  This^.__OnMouseEnter:= @TSlackGUI.OnMouseEnter;
+  This^.__OnMouseLeave:= @TSlackGUI.OnMouseLeave;
+  This^.__OnClick     := @TSlackGUI.OnClick;
+end;
+
+function FormObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TFormObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+end;
+
+function WndDragObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TWndDragObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otWndDrag;
+
+  DefaultCallbacks(Result);
+  Result^.__OnMouseDown := @TSlackGUI.OnDragWindowStart;
+  Result^.__OnMouseMove := @TSlackGUI.OnDragWindow;
+  Result^.__OnMouseUp   := @TSlackGUI.OnDragWindowStop;
+end;
+
+function TextObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TTextObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otText;
+
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+end;
+
+function ButtonObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TButtonObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otButton;
+
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+
+  Result^.__OnMouseEnter:= @TSlackGUI.OnButtonEnter;
+  Result^.__OnMouseLeave:= @TSlackGUI.OnButtonLeave;
+end;
+
+function CheckBoxObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TCheckBoxObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otCheckbox;
+  
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+
+  Result^.__OnMouseEnter:= @TSlackGUI.OnCheckboxEnter;
+  Result^.__OnMouseLeave:= @TSlackGUI.OnCheckboxLeave;
+  Result^.__OnClick     := @TSlackGUI.OnCheckboxClick;
+end;
+
+function LabelObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TLabelObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otLabel;
+
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+end;
+
+
+
+
+// -----------------------------------------------------------------------------
+// drawing
+
+procedure TCanvas.DrawBitmap(Bounds: TRect; BMP: TBitmap; DrawMode:EFitImageMode); constref;
+var
+  TMP: TBitmap;
+  newW, newH: Int32;
+begin
+  if DrawMode = fitPerfect then
+    self.CopyRect(Bounds, BMP.GetCanvas, [0,0,BMP.GetWidth-1,BMP.GetHeight-1])
+  else
+  begin
+    TMP.Init();
+    TMP.Assign(BMP);
+
+    newW := Min(Bounds.Width, BMP.GetWidth);
+    newH := Min(Bounds.Height, BMP.GetHeight);
+    Bounds := [Bounds.Left, Bounds.Top, Bounds.Left+newW-1, Bounds.Top+newH-1];
+
+    Self.CopyRect(Bounds, TMP.GetCanvas, [0,0, newW-1, newH-1]);
+    TMP.Free();
+  end;
+end;
+
+procedure TCanvas.DrawSolidRect(B:TRect; color:Int32); constref;
+begin
+  self.GetBrush.SetColor(color);
+  self.FillRect(B.Left,B.Top,B.Right,b.Bottom);
+end;
+
+procedure TCanvas.DrawBorder(B:TRect; width, color:Int32); constref;
+begin
+  SlackGUI.Image.GetCanvas.GetPen.SetColor(color);
+  SlackGUI.Image.GetCanvas.GetBrush.SetStyle(bsClear);
+  for 1 to width do
+    SlackGUI.Image.GetCanvas.Rectangle(B.Expand(-1,-1));
+end;
+
+
+
+// -----------------------------------------------------------------------------
+// FormObject
+
+function TFormObject.Styles: TStyleSet;
+begin
+  Result := Self^.Styles;
+end;
+
+function TFormObject.Bounds: TRect;
+var
+  parent: TFormObject;
+  pad: TRect;
+begin
+  Result := Self^.Bounds;
+
+  if (Self^.Position = bpAbsolute) then
+    Exit;
+
+  parent := Self^.Parent;
+  if (parent <> nil) then
+  begin
+    Result.Left   := Max(0, parent.Bounds.Left   + Result.Left);
+    Result.Top    := Max(0, parent.Bounds.Top    + Result.Top);
+    Result.Right  := Max(0, parent.Bounds.Right  + Result.Right);
+    Result.Bottom := Max(0, parent.Bounds.Bottom + Result.Bottom);
+  end else
+  begin
+    Result.Left   := Max(0, Result.Left);
+    Result.Top    := Max(0, Result.Top);
+    Result.Right  := Max(0, SlackGUI.Form.GetWidth  + Result.Right);
+    Result.Bottom := Max(0, SlackGUI.Form.GetHeight + Result.Bottom);
+  end;
+end;
+
+procedure TFormObjectRec.SetWidth(newWidth: Int32);
+var 
+  ptrSelf: TFormObject;
+begin
+  if (Self.Position = bpAbsolute) then
+    Self.Bounds.Right := Self.Bounds.Left + newWidth-1
+  else
+  begin
+    ptrSelf := @Self;
+    Self.Bounds := ptrSelf.Bounds;
+    Self.Bounds.Right := Self.Bounds.Left + newWidth-1;
+    Self.Position = bpAbsolute;
+  end;
+end;
+
+procedure TFormObjectRec.SetHeight(newHeight: Int32);
+var
+  ptrSelf: TFormObject;
+begin
+  if (Self.Position = bpAbsolute) then
+    Self.Bounds.Bottom := Self.Bounds.Top + newHeight-1
+  else
+  begin
+    ptrSelf := @Self;
+    Self.Bounds := ptrSelf.Bounds;
+    Self.Bounds.Bottom := Self.Bounds.Top + newHeight-1;
+    Self.Position = bpAbsolute;
+  end;
+end;
+
+
+// -----------------------------------------------------------------------------
+// GUI
+
+procedure TSlackGUI.RenderBasicBlock(FObject: TFormObject); static;
+var
+  BGIMG: TBitmap;
+  Bounds: TRect;
+begin
+  with FObject.Styles do
+  begin
+    Bounds := FObject.Bounds;
+    SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
+
+    BGIMG := SlackGUI.LoadImage(BackgroundImage);
+    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawBitmap(Bounds, BGIMG, BackgroundImageFit);
+    SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
+  end;
+end;
+
+procedure TSlackGUI.RenderText(FObject: TFormObject); static;
+begin
+  with FObject.Styles do
+  begin
+    SlackGUI.Image.GetCanvas.GetBrush.SetStyle(bsClear);
+    SlackGUI.Image.GetCanvas.GetFont.SetName(FontName);
+    SlackGUI.Image.GetCanvas.GetFont.SetColor(FontColor);
+    SlackGUI.Image.GetCanvas.GetFont.SetSize(FontSize);
+    SlackGUI.Image.GetCanvas.GetFont.SetStyle(FontStyle);
+    SlackGUI.Image.GetCanvas.TextOut(FObject.Bounds.Left, FObject.Bounds.Top, TTextObject(FObject)^.Text);
+  end;
+end;
+
+procedure TSlackGUI.RenderTextButton(FObject: TFormObject); static;
+begin
+  SlackGUI.RenderBasicBlock(FObject);
+  SlackGUI.RenderText(FObject);
+end;
+
+procedure TSlackGUI.RenderCheckbox(FObject: TFormObject); static;
+var
+  Bounds: TRect;
+  TextWidth,TextHeight: Int32;
+begin
+  with FObject.Styles do
+  begin
+    Bounds := FObject.Bounds;
+
+    SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
+    SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
+    
+    if TCheckboxObject(FObject)^.IsChecked then
+      SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds.PreExpand(-3), BorderColor);
+  end;
+end;
+
+procedure TSlackGUI.RenderLabelBlock(FObject: TFormObject); static;
+var
+  Bounds: TRect;
+  BGIMG: TBitmap;
+begin
+  with FObject.Styles do
+  begin
+    SlackGUI.Image.GetCanvas.GetFont.SetName(FontName);
+    SlackGUI.Image.GetCanvas.GetFont.SetColor(FontColor);
+    SlackGUI.Image.GetCanvas.GetFont.SetSize(FontSize);
+    SlackGUI.Image.GetCanvas.GetFont.SetStyle(FontStyle);
+
+    Bounds := FObject.Bounds;
+    Bounds.Top += SlackGUI.Image.GetCanvas.TextHeight(TTextObject(FObject)^.Text) div 2;
+
+    SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
+    BGIMG := SlackGUI.LoadImage(BackgroundImage);
+    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawBitmap(Bounds, BGIMG, BackgroundImageFit);
+    SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
+    
+    SlackGUI.Image.GetCanvas.GetBrush.SetStyle(bsClear);
+    SlackGUI.Image.GetCanvas.TextOut(FObject.Bounds.Left+10, FObject.Bounds.Top, TTextObject(FObject)^.Text);
+  end;
+end;
+
+procedure TSlackGUI.RenderFrom(Obj: TFormObject); static;
+var i:Int32;
+begin
+  Obj^.RenderProc(Obj);
+  for i:=0 to High(Obj^.Children) do
+    RenderFrom(Obj^.Children[i]);
+end;
+
+procedure TSlackGUI.Render(_,Sender:TObject); static;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+    SlackGUI.FocusObject := SlackGUI.Objects[0];
+
+  if (SlackGUI.FocusObject^.Typ = otWndDrag) and (TWndDragObject(SlackGUI.FocusObject)^.IsDragging) then
+    Exit;
+
+  SlackGUI.Timer.SetEnabled(False);
+  RenderFrom(SlackGUI.Objects[0]);
+  SlackGUI.Timer.SetEnabled(True);
+end;
+
+// -----------------------------------------------------------------------------
+// GUI EVENT PROCESSING
+
+function TSlackGUI.FindObjectNear(X,Y: Int32; Obj: TFormObject): TFormObject; static;
+var
+  i: Int32;
+  tmp: TFormObject;
+begin
+  Result := nil;
+  if PointInBox(Point(X,Y), TBox(obj.Bounds)) then
+    Result := Obj;
+
+  for i:=0 to High(Obj^.Children) do
+  begin
+    tmp := FindObjectNear(X,Y, Obj^.Children[i]);
+    if (tmp <> nil) then
+      Result := tmp;
+  end;
+end;
+
+procedure TSlackGUI.ProcessMouseDownEvent(_, Sender: TObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+var
+  Obj: TFormObject;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  Obj := SlackGUI.FindObjectNear(X,Y, SlackGUI.Objects[0]);
+  if Obj = nil then Exit;
+
+  if (@Obj^.__OnMouseDown <> nil) then
+  begin
+    SlackGUI.FocusObject := Obj;
+    Obj^.__OnMouseDown(Obj, Button, Shift, X,Y);
+  end;
+end;
+
+procedure TSlackGUI.ProcessMouseUpEvent(_, Sender: TObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+var
+  Obj: TFormObject;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+  begin
+    Obj := SlackGUI.FindObjectNear(X,Y, SlackGUI.Objects[0]);
+    if Obj = nil then Exit;
+
+    if (@Obj^.__OnMouseUp <> nil) then
+      Obj^.__OnMouseUp(Obj, Button, Shift, X,Y);
+  end else
+  begin
+    if (@SlackGUI.FocusObject^.__OnMouseUp <> nil) and (PointInBox(Point(X,Y), TBox(SlackGUI.FocusObject.Bounds))) then
+      SlackGUI.FocusObject^.__OnMouseUp(SlackGUI.FocusObject, Button, Shift, X,Y);
+  end;
+end;
+
+procedure TSlackGUI.ProcessMouseMoveEvent(_, Sender: TObject; Shift: TShiftState; X,Y: Int32); static;
+var
+  Obj: TFormObject;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  Obj := SlackGUI.FindObjectNear(X,Y, SlackGUI.Objects[0]);
+  if Obj = nil then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+  begin
+    if (@Obj^.__OnMouseMove <> nil) then
+      Obj^.__OnMouseMove(Obj, Shift, X,Y);
+  end else
+    if (@SlackGUI.FocusObject^.__OnMouseMove <> nil) then
+      SlackGUI.FocusObject^.__OnMouseMove(SlackGUI.FocusObject, Shift, X,Y);
+
+  if (SlackGUI.HoverObject <> Obj) then
+  begin
+    if (SlackGUI.HoverObject <> nil) and (@SlackGUI.HoverObject^.__OnMouseLeave <> nil) then
+      SlackGUI.HoverObject^.__OnMouseLeave(SlackGUI.HoverObject);
+
+    SlackGUI.HoverObject := Obj;
+    if (@SlackGUI.HoverObject^.__OnMouseEnter <> nil) then
+      SlackGUI.HoverObject^.__OnMouseEnter(SlackGUI.HoverObject);
+  end;
+end;
+
+
+// -----------------------------------------------------------------------------
+// GUI
+function TSlackGUI.AddObject(NewObj: TFormObject): TFormObject;
+begin
+  Objects[ObjectCount] := NewObj;
+  Objects[ObjectCount]^.Index := ObjectCount;
+
+  Result := NewObj;
+  if (Result^.Parent <> nil) then
+    Result^.Parent^.Children += Result;
+  
+  Inc(ObjectCount);
+end;
+
+function TSlackGUI.Canvas: TCanvas; constref;
+begin
+  Result := Self.Image.GetCanvas();
+end;
+
+function TSlackGUI.LoadImage(Path: String): TBitmap;
+var
+  i,h: Int32;
+  muf: TMufasaBitmap;
+begin
+  if Path = '' then
+    Exit(nil);
+
+  for i:=0 to High(SlackGUI.Images) do
+    if (Path = SlackGUI.Images[i].Path) then
+      Exit(SlackGUI.Images[i].Image);
+
+  muf.Init(client.GetMBitmaps);
+  muf.LoadFromFile(Path);
+  Result := muf.ToTBitmap;
+  muf.Free();
+
+  h := Length(SlackGUI.Images);
+  SetLength(SlackGUI.Images, h+1);
+  SlackGUI.Images[h].Image := Result;
+  SlackGUI.Images[h].Path  := Path;
+end;
+
+function TSlackGUI.AddImage(Image:TMufasaBitmap; Name: String): TBitmap;
+var
+  h: Int32;
+begin
+  Result := Image.ToTBitmap;
+  h := Length(SlackGUI.Images);
+  SetLength(SlackGUI.Images, h+1);
+  SlackGUI.Images[h].Image := Result;
+  SlackGUI.Images[h].Path  := Name;
+end;
+
+procedure TSlackGUI.Init(); static;
+begin
+  SetLength(SlackGUI.Objects, 1024);
+  SlackGUI.Form.Init(nil);
+
+  with SlackGUI.Form do
+  begin
+    SetCaption('SlackGUI');
+    SetWidth(SlackGUI.Width);
+    SetHeight(SlackGUI.Height);
+    SetBorderStyle(bsNone);
+
+    GetConstraints().SetMaxWidth(SlackGUI.Width);
+    GetConstraints().SetMaxHeight(SlackGUI.Height);
+    GetConstraints().SetMinWidth(SlackGUI.Width);
+    GetConstraints().SetMinHeight(SlackGUI.Height);
+
+    SetPosition(poScreenCenter);
+  end;
+
+  SlackGUI.Image.Init(SlackGUI.Form);
+  with SlackGUI.Image do
+  begin
+    SetParent(SlackGUI.Form);
+    SetBounds(0,0, SlackGUI.Width, SlackGUI.Height);
+    SetCenter(True);
+
+    SetOnMouseDown(@TSlackGUI.ProcessMouseDownEvent);
+    SetOnMouseUp  (@TSlackGUI.ProcessMouseUpEvent);
+    SetOnMouseMove(@TSlackGUI.ProcessMouseMoveEvent);
+  end;
+
+  SlackGUI.Timer.Init(SlackGUI.Form);
+  with SlackGUI.Timer do
+  begin
+    SlackGUI.Timer.SetOnTimer(@TSlackGUI.Render);
+    SlackGUI.Timer.SetInterval(15);
+  end;
+
+  SlackGUI.Timer.SetEnabled(True);
+end;
+
+
+procedure TSlackGUI.Free; static;
+var i:Int32;
+begin
+  if (SlackGUI.Form = nil) then
+    Exit();
+
+  SlackGUI.Timer.SetEnabled(False);
+  SlackGUI.Form.Free();
+
+  for i:=0 to SlackGUI.ObjectCount-1 do
+  begin
+    SetLength(SlackGUI.Objects[i]^.Children, 0);
+    SetLength(SlackGUI.Objects[i]^.Name, 0);
+    FreeMem(SlackGUI.Objects[i]);
+  end;
+
+  for i:=0 to High(SlackGUI.Images) do
+  begin
+    SlackGUI.Images[i].Image.Free();
+  end;
+end;
+
+procedure TSlackGUI.Show();
+begin
+  SlackGUI := Self;
+  try
+    Sync(@TSlackGUI.Init);
+  except
+    WriteLn('ERROR: Failed to initialize form');
+  finally
+    Sync(@TSlackGUI.Free);
+  end;
+end;
+
+
+begin
+  SlackGUI.Width  := 800;
+  SlackGUI.Height := 600;
+end;
+
+
