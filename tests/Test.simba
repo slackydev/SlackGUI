@@ -4,16 +4,7 @@ program MY_TSlackGUI;
 
 const
   RS_WIDTH   = 900;
-  RS_HEIGHT  = 510;
-
-  clBG0 = 0;
-  clBG1 = $1F1A13;//$332222;
-  clBG2 = $2F2A23;//$443333
-  clBG3 = $3F3A33;//9140597;
-
-  clFG1 = $FFFFFF;
-  clFG2 = 16767488;
-  clFG3 = 7369204;
+  RS_HEIGHT  = 520;
 
 
 var
@@ -54,21 +45,11 @@ procedure TSlackGUI.Init(); static; override;
 var
   TitleBar, TopObject, Label1, Body: TFormObject;
   W, H: Int32;
-
-  function DefaultStyles(): TStyleSet;
-  begin
-    Result.Background  := clBG2;
-    Result.BorderColor := clBG0;
-    Result.BorderSize := 0;
-    Result.FontColor  := clFG1;
-    Result.FontStyle  := [fsBold];
-    Result.FontSize   := 10;
-    Result.FontName   := 'Tahoma';
-  end;
-
 begin
   SlackGUI.Width  := 900;
   SlackGUI.Height := 480;
+  SlackGUI.Palette := DARK_NEUTRAL;
+
   inherited;
 
   W := SlackGUI.Width;
@@ -76,30 +57,25 @@ begin
 
   with (TopObject := SlackGUI.AddObject(FormObject('Stub')))^ do
   begin
-    Position := bpRelative;
-    Styles   := DefaultStyles;
-    Styles2  := Styles;
+    Position   := bpRelative;
+    Styles.Background  := SlackGUI.Palette[clBackground2];
+    Styles.BorderColor := SlackGUI.Palette[clBorder1];
+    Styles.BorderSize  := 2;
     RenderProc := @RenderBasicBlock;
   end;
 
-  with (TitleBar := SlackGUI.AddObject(WndDragObject('TitleBar', [0,0,W,29], TopObject)))^ do
+  with TTitlebarObject(TitleBar := SlackGUI.AddObject(TitlebarObject('TitleBar', [0,0,W,29], TopObject)))^ do
   begin
-    Styles.Background := clBG1;
-    RenderProc := @RenderBasicBlock;
-  end;
+    Text := SlackGUI.Form.GetCaption;
 
-  with TTextObject(SlackGUI.AddObject(TextObject('TitleText', TitleBar.Bounds, TitleBar)))^ do
-  begin
-    Bounds := Rect(Bounds.Left+15, Bounds.Top+5, 0,0);
-    Text   := SlackGUI.Form.GetCaption;
-
-    Styles := DefaultStyles;
-    Styles.FontColor  := clFG1;
-    Styles.Background := clBG2;
-    Styles.FontStyle  := [fsBold];
-    Styles.FontSize   := 12;
-
-    RenderProc := @RenderText;
+    Styles.Background  := $1F1A13;
+    Styles.BorderColor := SlackGUI.Palette[clBorder1];
+    Styles.BorderSize  := 0;
+    Styles.FontStyle := [fsBold];
+    Styles.FontColor := SlackGUI.Palette[clText1];
+    Styles.FontSize  := 12;
+    Styles.FontName  := 'Tahoma';
+    RenderProc := @RenderTitlebar;
   end;
 
   with TButtonObject(SlackGUI.AddObject(ButtonObject('GUIClose', TitleBar.Bounds, TitleBar)))^ do
@@ -107,14 +83,15 @@ begin
     Bounds := Rect(Bounds.Right-26, Bounds.Top+4, Bounds.Right-4, Bounds.Bottom-4);
     Text   := ' X';
     Styles.FontName   := 'MS Sans Serif';
-    Styles.Background := clBG2;
+    Styles.Background := SlackGUI.Palette[clBackground1];
+    Styles.BorderSize := 0;
     Styles.FontSize   := 13;
     Styles.FontStyle  := [fsBold];
-    Styles.FontColor  := $777777;
+    Styles.FontColor  := SlackGUI.Palette[clText3];
 
     Styles2 := Styles;
-    Styles2.Background := $0000FF;
-    Styles2.FontColor  := $FFFFFF;
+    Styles2.Background := clRed;
+    Styles2.FontColor  := SlackGUI.Palette[clText1];
 
     RenderProc := @RenderTextButton;
     OnClick    := @OnCloseWindow;
@@ -122,16 +99,16 @@ begin
 
   with (Body := SlackGUI.AddObject(FormObject('MainBody', [15,45,-15,-15], TopObject)))^ do
   begin
-    Position := bpRelative;
+    Position   := bpRelative;
+    Styles.Background  := SlackGUI.Palette[clBackground2];
+    Styles.BorderColor := SlackGUI.Palette[clBorder1];
+    Styles.BorderSize  := 0;
     RenderProc := @RenderBasicBlock;
   end;
 
   with SlackGUI.AddObject(FormObject('Client', [0,0,-230,-70], Body))^ do
   begin
-    Position := bpRelative;
-    Styles.BorderSize  := 4;
-    Styles.BorderColor := clBG1;
-    Styles.Background  := clBG2;
+    Position   := bpRelative;
     RenderProc := @DrawClient;
   end;
 
@@ -139,42 +116,35 @@ begin
   begin
     Position := bpRelative;
     Text := 'Label test';
-
-    Styles := DefaultStyles;
-    Styles.FontColor   := clFG1;
-    Styles.BorderColor := clBG1;
-    Styles.BorderSize  := 4;
-    Styles.Background  := clBG3;
-    Styles.FontStyle   := [fsBold];
-
     RenderProc := @RenderLabelBlock;
   end;
 
-  with TTextObject(SlackGUI.AddObject(TextObject('MyText', [15, H-80], Body)))^ do
+  with TCheckBoxObject(SlackGUI.AddObject(CheckboxObject('Checkbox1', [15,25], Label1)))^ do
   begin
-    Position := bpAbsolute;
-    Text := 'Do you wish to test me: ';
-
-    Styles := DefaultStyles;
-    Styles.FontColor   := clFG1;
-    Styles.BorderColor := clBG0;
-    RenderProc := @RenderText;
-  end;
-
-  with TCheckBoxObject(SlackGUI.AddObject(CheckboxObject('Checkbox', [176, H-78], Body)))^ do
-  begin
+    Position := bpRelative;
     SetWidth(15);
     SetHeight(15);
-
-    Position := bpAbsolute;
-    Styles.Background  := clBG3;
-    Styles.BorderColor := $AAAAAA;
-    Styles.BorderSize  := 1;
-
-    Styles2 := Styles;
-    Styles2.BorderColor := $FFFF00;
-
+    Text := 'Please check me!';
     RenderProc := @RenderCheckbox;
+  end;
+
+  with TCheckBoxObject(SlackGUI.AddObject(CheckboxObject('Checkbox2', [15,50], Label1)))^ do
+  begin
+    Position := bpRelative;
+    SetWidth(15);
+    SetHeight(15);
+    Text := 'Please check me to!';
+    RenderProc := @RenderCheckbox;
+  end;
+
+  with TButtonObject(SlackGUI.AddObject(ButtonObject('Button1', [0,360], Body)))^ do
+  begin
+    Position := bpRelative;
+    SetWidth(58);
+    SetHeight(20);
+    WriteLn(Bounds);
+    Text := 'BUTTON1';
+    RenderProc := @RenderTextButton;
   end;
 
   SlackGUI.Form.ShowModal;

@@ -1,5 +1,5 @@
 type
-  EFormObjectType = (otNone, otWndDrag, otText, otButton, otCheckbox, otRadios, otLabel, otInputArea);
+  EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otLabel, otInputArea);
   EFitImageMode   = (fitNone, fitPerfect, fitOverflow);
   EBoundsPosition = (bpAbsolute, bpRelative);
 
@@ -54,15 +54,15 @@ type
     __OnClick, OnClick: TNotifyEvt;
   end;
 
-  TWndDragObject = ^TWndDragObjectRec;
-  TWndDragObjectRec = record(TFormObjectRec)
-    IsDragging: Boolean;
-    DragStartX, DragStartY: Int32;
-  end;
-
   TTextObject = ^TTextObjectRec;
   TTextObjectRec = record(TFormObjectRec)
     Text: String;
+  end;
+  
+  TTitlebarObject = ^TTitlebarObjectRec;
+  TTitlebarObjectRec = record(TTextObjectRec)
+    IsDragging: Boolean;
+    DragStartX, DragStartY: Int32;
   end;
 
   TButtonObject = ^TButtonObjectRec;
@@ -71,12 +71,14 @@ type
   end;
   
   TCheckBoxObject = ^TCheckBoxObjectRec;
-  TCheckBoxObjectRec = record(TFormObjectRec)
+  TCheckBoxObjectRec = record(TTextObjectRec)
     IsChecked: Boolean;
   end;
 
   TLabelObject    = ^TLabelObjectRec;
   TLabelObjectRec = type TTextObjectRec;
+
+  
 
 
 function Rect(Left,Top,Right,Bottom: Int32): TRect;
