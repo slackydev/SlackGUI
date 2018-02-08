@@ -20,7 +20,7 @@ type
     Objects: array of TFormObject;
 
     Images: array of record
-      Image: TBitmap;
+      Image: TPicture;
       Path: string;
     end;
   end;
@@ -147,10 +147,9 @@ begin
   Result := Self.Image.GetCanvas();
 end;
 
-function TSlackGUI.LoadImage(Path: String): TBitmap;
+function TSlackGUI.LoadImage(Path: String): TPicture;
 var
   i,h: Int32;
-  muf: TMufasaBitmap;
 begin
   if Path = '' then
     Exit(nil);
@@ -158,23 +157,22 @@ begin
   for i:=0 to High(SlackGUI.Images) do
     if (Path = SlackGUI.Images[i].Path) then
       Exit(SlackGUI.Images[i].Image);
-
-  muf.Init(client.GetMBitmaps);
-  muf.LoadFromFile(Path);
-  Result := muf.ToTBitmap;
-  muf.Free();
+  
+  Result.Init();
+  Result.LoadFromFile(Path);
 
   h := Length(SlackGUI.Images);
   SetLength(SlackGUI.Images, h+1);
+  
   SlackGUI.Images[h].Image := Result;
   SlackGUI.Images[h].Path  := Path;
 end;
 
-function TSlackGUI.AddImage(Image:TMufasaBitmap; Name: String): TBitmap;
+function TSlackGUI.AddImage(Image: TPicture; Name: String): TPicture;
 var
   h: Int32;
 begin
-  Result := Image.ToTBitmap;
+  Result := Image;
   h := Length(SlackGUI.Images);
   SetLength(SlackGUI.Images, h+1);
   SlackGUI.Images[h].Image := Result;
@@ -217,7 +215,7 @@ begin
   with SlackGUI.Timer do
   begin
     SlackGUI.Timer.SetOnTimer(@TSlackGUI.Render);
-    SlackGUI.Timer.SetInterval(15);
+    SlackGUI.Timer.SetInterval(16);
   end;
 
   SlackGUI.Timer.SetEnabled(True);

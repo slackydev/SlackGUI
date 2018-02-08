@@ -9,7 +9,7 @@ end;
 
 procedure TSlackGUI.RenderBasicBlock(FObject: TFormObject); static;
 var
-  BGIMG: TBitmap;
+  BGIMG: TPicture;
   Bounds: TRect;
 begin
   with FObject.Styles do
@@ -18,7 +18,7 @@ begin
     SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
 
     BGIMG := SlackGUI.LoadImage(BackgroundImage);
-    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawBitmap(Bounds, BGIMG, BackgroundImageFit);
+    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawPicture(Bounds, BGIMG, BackgroundImageFit);
     SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
   end;
 end;
@@ -42,9 +42,51 @@ end;
 
 
 procedure TSlackGUI.RenderTextButton(FObject: TFormObject); static;
+var
+  BGIMG: TPicture;
+  Bounds: TRect;
+  Size: TSize2D;
 begin
-  SlackGUI.RenderBasicBlock(FObject);
-  SlackGUI.RenderTextAt(FObject, FObject.Bounds.Left, FObject.Bounds.Top);
+  SlackGUI.ApplyStyle(FObject.Styles);
+  Size.Wid := SlackGUI.Image.GetCanvas.TextWidth(TTextObject(FObject)^.Text);
+  Size.Hei := SlackGUI.Image.GetCanvas.TextHeight(TTextObject(FObject)^.Text);
+  
+  FObject.ReComputeSize(Size);
+  Bounds := FObject.Bounds;
+  
+  with FObject.Styles do
+  begin
+    SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
+
+    BGIMG := SlackGUI.LoadImage(BackgroundImage);
+    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawPicture(Bounds, BGIMG, BackgroundImageFit);
+    SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
+  end;
+  
+  Bounds.Pad(FObject^.Styles.Padding);
+  SlackGUI.Image.GetCanvas.TextOut(Bounds.Left, Bounds.Top, TTextObject(FObject)^.Text);
+end;
+
+procedure TSlackGUI.RenderImgButton(FObject: TFormObject); static;
+var
+  BGIMG: TPicture;
+  B: TRect;
+  Size: TSize2D;
+begin
+  SlackGUI.ApplyStyle(FObject.Styles);
+  BGIMG := SlackGUI.LoadImage(TTextObject(FObject)^.Text);
+
+  if BGIMG <> nil then
+    FObject.ReComputeSize([BGIMG.GetWidth,BGIMG.GetHeight]);
+  
+  B := FObject.Bounds;
+  with FObject.Styles do
+  begin
+    SlackGUI.Image.GetCanvas.DrawSolidRect(B, Background);
+    if BGIMG <> nil then SlackGUI.Image.GetCanvas.DrawPicture(B, BGIMG, BackgroundImageFit);
+    SlackGUI.Image.GetCanvas.DrawBorder(B, BorderSize, BorderColor);
+  end;
+  //Bounds.Pad(FObject^.Styles.Padding);
 end;
 
 procedure TSlackGUI.RenderCheckbox(FObject: TFormObject); static;
@@ -67,10 +109,10 @@ begin
   end;
 end;
 
-procedure TSlackGUI.RenderLabelBlock(FObject: TFormObject); static;
+procedure TSlackGUI.RenderLabeledBlock(FObject: TFormObject); static;
 var
   Bounds: TRect;
-  BGIMG: TBitmap;
+  BGIMG: TPicture;
 begin
   with FObject.Styles do
   begin
@@ -81,9 +123,9 @@ begin
     
     SlackGUI.Image.GetCanvas.DrawSolidRect(Bounds, Background);
     BGIMG := SlackGUI.LoadImage(BackgroundImage);
-    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawBitmap(Bounds, BGIMG, BackgroundImageFit);
+    if (BGIMG <> nil) then SlackGUI.Image.GetCanvas.DrawPicture(Bounds, BGIMG, BackgroundImageFit);
     SlackGUI.Image.GetCanvas.DrawBorder(Bounds, BorderSize, BorderColor);
-      
+    
     SlackGUI.Image.GetCanvas.TextOut(FObject.Bounds.Left+10, FObject.Bounds.Top, TTextObject(FObject)^.Text);
   end;
 end;

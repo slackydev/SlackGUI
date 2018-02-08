@@ -31,9 +31,9 @@ begin
 
   muf.Init();
   muf.CopyClientToBitmap(client.GetIOManager(), True, 0,130,RS_WIDTH-1,130+RS_HEIGHT-1);
-  muf.ResizeEx(RM_Bilinear, W-10,H-10);
+  muf.ResizeEx(RM_Bilinear, W-8,H-8);
   tmp := muf.ToTBitmap;
-  SlackGUI.Canvas.Draw(x+5,y+5,tmp);
+  SlackGUI.Canvas.Draw(x+4,y+4,tmp);
   tmp.Free();
   muf.Free();
 
@@ -80,14 +80,15 @@ begin
 
   with TButtonObject(SlackGUI.AddObject(ButtonObject('GUIClose', TitleBar.Bounds, TitleBar)))^ do
   begin
-    Bounds := Rect(Bounds.Right-26, Bounds.Top+4, Bounds.Right-4, Bounds.Bottom-4);
-    Text   := ' X';
+    Bounds := Rect(Bounds.Right-26, Bounds.Top, Bounds.Right, Bounds.Bottom);
+    Text   := 'X';
     Styles.FontName   := 'MS Sans Serif';
     Styles.Background := SlackGUI.Palette[clBackground1];
     Styles.BorderSize := 0;
     Styles.FontSize   := 13;
     Styles.FontStyle  := [fsBold];
     Styles.FontColor  := SlackGUI.Palette[clText3];
+    Styles.Padding    := [7,5,0,0];
 
     Styles2 := Styles;
     Styles2.Background := clRed;

@@ -40,7 +40,7 @@ begin
   //Self^.Styles.TextWrap  := True;
   //Self^.Styles.Overflow  := False;
   //Self^.Styles.Align     := al;
-end; 
+end;
 
 procedure TButtonObject.SetDefaultStyles();
 begin
@@ -54,6 +54,7 @@ begin
   //Self^.Styles.TextWrap  := True;
   //Self^.Styles.Overflow  := False;
   //Self^.Styles.Align     := al;
+  Self^.Styles.Padding     := [6,3,6,5];
   
   Self^.Styles2 := Self^.Styles;
   Self^.Styles2.BorderSize  := 2;
@@ -81,7 +82,7 @@ begin
   Self^.Styles2.BorderColor := SlackGUI.Palette[clHighlighted1];
 end;
 
-procedure TLabelObject.SetDefaultStyles();
+procedure TBlockObject.SetDefaultStyles();
 begin
   Self^.Styles.Background  := SlackGUI.Palette[clBackground3];
   Self^.Styles.BorderColor := SlackGUI.Palette[clBorder1];
@@ -93,7 +94,7 @@ begin
   //Self^.Styles.TextWrap  := True;
   //Self^.Styles.Overflow  := False;
   //Self^.Styles.Align     := al;
-end;  
+end;
 
 
 // ----------------------------------------------------------------------------
@@ -104,38 +105,81 @@ begin
   Result := Self^.Styles;
 end;
 
-function TFormObject.Bounds: TRect;
+function TFormObject.Bounds(AddPadding: Boolean = True): TRect;
 var
   parent: TFormObject;
-  pad: TRect;
+  p,b: TRect;
 begin
   Result := Self^.Bounds;
-
-  if (Self^.Position = bpAbsolute) then
-    Exit;
-
   parent := Self^.Parent;
-  if (parent <> nil) then
+  
+  if (Self^.Position = bpRelative) then
   begin
-    Result.Left   := Max(0, parent.Bounds.Left   + Result.Left);
-    Result.Top    := Max(0, parent.Bounds.Top    + Result.Top);
-    Result.Right  := Max(0, parent.Bounds.Right  + Result.Right);
-    Result.Bottom := Max(0, parent.Bounds.Bottom + Result.Bottom);
-  end else
+    if (parent <> nil) then
+    begin
+      Result.Left   := Max(0, parent.Bounds.Left   + Result.Left);
+      Result.Top    := Max(0, parent.Bounds.Top    + Result.Top);
+      Result.Right  := Max(0, parent.Bounds.Right  + Result.Right);
+      Result.Bottom := Max(0, parent.Bounds.Bottom + Result.Bottom);
+    end else
+    begin
+      Result.Left   := Max(0, Result.Left);
+      Result.Top    := Max(0, Result.Top);
+      Result.Right  := Max(0, SlackGUI.Form.GetWidth  + Result.Right);
+      Result.Bottom := Max(0, SlackGUI.Form.GetHeight + Result.Bottom);
+    end;
+  end else if (Self^.Position = bpInherited) then
   begin
-    Result.Left   := Max(0, Result.Left);
-    Result.Top    := Max(0, Result.Top);
-    Result.Right  := Max(0, SlackGUI.Form.GetWidth  + Result.Right);
-    Result.Bottom := Max(0, SlackGUI.Form.GetHeight + Result.Bottom);
+    //WriteLn parent.Bounds;
+    if (parent <> nil) then
+    begin
+      Result.Left   := Max(0, parent.Bounds.Left + Result.Left);
+      Result.Top    := Max(0, parent.Bounds.Top  + Result.Top);
+      Result.Right  := Max(0, parent.Bounds.Left + Result.Right);
+      Result.Bottom := Max(0, parent.Bounds.Top  + Result.Bottom);
+    end else
+    begin
+      Result.Left   := Max(0, Result.Left);
+      Result.Top    := Max(0, Result.Top);
+      Result.Right  := Max(0, Result.Right);
+      Result.Bottom := Max(0, Result.Bottom);
+    end;
+  end;
+  
+  if (parent <> nil) and AddPadding then
+  begin
+    b := parent.Bounds;
+    p := parent^.Styles.Padding;
+    
+    Result.Left   += p.Left;
+    Result.Top    += p.Top;
+    Result.Right  += p.Right;
+    Result.Bottom += p.Bottom;
+    
+    if Result.Right  > b.Right - p.Right  then Result.Right  := b.Right-p.Right;
+    if Result.Bottom > b.Bottom- p.Bottom then Result.Bottom := b.Bottom-p.Bottom;
+    
   end;
 end; 
+
+procedure TFormObject.RecomputeSize(InternalSize: TSize2D);
+var
+  B,Pad: TRect;
+begin
+  B   := Self.Bounds;
+  Pad := Self^.Styles.Padding;
+  if (B.Left + InternalSize.Wid + Pad.Left + Pad.Right > B.Right) then 
+    Self^.SetWidth(InternalSize.Wid + Pad.Left + Pad.Right);
+  if (B.Top  + InternalSize.Hei + Pad.Top + Pad.Bottom > B.Bottom) then 
+    Self^.SetHeight(InternalSize.Hei + Pad.Top + Pad.Bottom);
+end;
 
 
 // ----------------------------------------------------------------------------
 // Record
 
 procedure TFormObjectRec.SetWidth(newWidth: Int32);
-var 
+var
   ptrSelf: TFormObject;
 begin
   if (Self.Position = bpAbsolute) then
@@ -143,7 +187,7 @@ begin
   else
   begin
     ptrSelf := @Self;
-    Self.Bounds := ptrSelf.Bounds;
+    Self.Bounds := ptrSelf.Bounds(False);
     Self.Bounds.Right := Self.Bounds.Left + newWidth-1;
     Self.Position := bpAbsolute;
   end;
@@ -158,8 +202,8 @@ begin
   else
   begin
     ptrSelf := @Self;
-    Self.Bounds := ptrSelf.Bounds;
+    Self.Bounds := ptrSelf.Bounds(False);
     Self.Bounds.Bottom := Self.Bounds.Top + newHeight-1;
     Self.Position := bpAbsolute;
   end;
-end;  
+end;

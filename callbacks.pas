@@ -11,7 +11,7 @@ begin
   if (Sender^.__IsHolding) and (Button = mbLeft) then
   begin
     Sender^.__IsHolding := False;
-    if (@Sender^.__OnClick <> nil) then Sender^.__OnClick(Sender);
+    if (@Sender^.__OnClick <> nil) then Sender^.__OnClick(Sender, Button, Shift, X,Y);
   end;
 
   if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
@@ -42,9 +42,9 @@ begin
   if (@Sender^.OnMouseLeave <> nil) then Sender^.OnMouseLeave(Sender);
 end;
 
-procedure TSlackGUI.OnClick(Sender: TFormObject); static;
+procedure TSlackGUI.OnClick(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
 begin
-  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender);
+  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender, Button, Shift, X,Y);
 end;
 
 
@@ -77,10 +77,10 @@ begin
   if (@Sender^.OnMouseLeave <> nil) then Sender^.OnMouseLeave(Sender);
 end;
 
-procedure TSlackGUI.OnCheckboxClick(Sender: TFormObject); static;
+procedure TSlackGUI.OnCheckboxClick(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
 begin
   TCheckboxObject(Sender)^.IsChecked := not TCheckboxObject(Sender)^.IsChecked;
-  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender);
+  if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender, Button, Shift, X,Y);
 end;
 
 

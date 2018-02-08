@@ -7,7 +7,7 @@ begin
     otButton:     TButtonObject(This).SetDefaultStyles(); 
     otCheckbox:   TCheckboxObject(This).SetDefaultStyles(); 
     otRadios:     This.SetDefaultStyles(); 
-    otLabel:      TLabelObject(This).SetDefaultStyles();
+    otBlock:      TBlockObject(This).SetDefaultStyles();
     otInputArea:  This.SetDefaultStyles(); 
   end;
   
@@ -112,13 +112,13 @@ begin
   Result^.__OnClick     := @TSlackGUI.OnCheckboxClick;
 end;
 
-function LabelObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+function BlockObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
 begin
-  Result := AllocMem(SizeOf(TLabelObjectRec));
+  Result := AllocMem(SizeOf(TBlockObjectRec));
   Result^.Name   := Name;
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
-  Result^.Typ    := otLabel;
+  Result^.Typ    := otBlock;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);

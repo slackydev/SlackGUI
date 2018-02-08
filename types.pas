@@ -1,10 +1,12 @@
 type
-  EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otLabel, otInputArea);
+  EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otBlock, otInputArea);
   EFitImageMode   = (fitNone, fitPerfect, fitOverflow);
-  EBoundsPosition = (bpAbsolute, bpRelative);
+  EBoundsPosition = (bpInherited, bpAbsolute, bpRelative);
 
+  TSize2D = record Wid, Hei: Int32; end;
+  
   TFormObject = ^TFormObjectRec;
-
+  
   TMouseEvt     = procedure(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32);
   TMouseMoveEvt = procedure(Sender: TFormObject; Shift: TShiftState; X,Y: Int32);
   TKeyEvt       = procedure(Sender: TFormObject; Key: Word; Shift: TShiftState);
@@ -23,6 +25,8 @@ type
     FontSize:  Int32;
     FontName:  ShortString;
 
+    Padding: TRect;
+    
     TextWrap: Boolean;
     Overflow: Boolean;
 
@@ -51,12 +55,12 @@ type
 
     __OnMouseEnter, OnMouseEnter: TNotifyEvt;
     __OnMouseLeave, OnMouseLeave: TNotifyEvt;
-    __OnClick, OnClick: TNotifyEvt;
+    __OnClick, OnClick: TMouseEvt;
   end;
 
   TTextObject = ^TTextObjectRec;
   TTextObjectRec = record(TFormObjectRec)
-    Text: String;
+    Text: UnicodeString;
   end;
   
   TTitlebarObject = ^TTitlebarObjectRec;
@@ -67,7 +71,7 @@ type
 
   TButtonObject = ^TButtonObjectRec;
   TButtonObjectRec = record(TTextObjectRec)
-    IsDown: Boolean;
+    IsDown, IsImage: Boolean;
   end;
   
   TCheckBoxObject = ^TCheckBoxObjectRec;
@@ -75,8 +79,8 @@ type
     IsChecked: Boolean;
   end;
 
-  TLabelObject    = ^TLabelObjectRec;
-  TLabelObjectRec = type TTextObjectRec;
+  TBlockObject = ^TBlockObjectRec;
+  TBlockObjectRec = type TTextObjectRec;
 
   
 
@@ -117,5 +121,17 @@ end;
 function TRect.PreExpand(Z: Int32): TRect; overload;
 begin
   Self := [Left-Z,Top-Z,Right+Z,Bottom+Z];
+  Result := Self;
+end;
+
+function TRect.Pad(P: TRect): TRect; overload;
+begin
+  Result := Self;
+  Self := [Left+P.Left, Top+P.Top, Right-P.Right, Bottom-P.Bottom];
+end;
+
+function TRect.PrePad(P: TRect): TRect; overload;
+begin
+  Self := [Left+P.Left, Top+P.Top, Right-P.Right, Bottom-P.Bottom];
   Result := Self;
 end;

@@ -1,23 +1,20 @@
-procedure TCanvas.DrawBitmap(Bounds: TRect; BMP: TBitmap; DrawMode:EFitImageMode); constref;
+procedure TCanvas.DrawPicture(Bounds: TRect; Pic: TPicture; DrawMode:EFitImageMode); constref;
 var
   TMP: TBitmap;
   newW, newH: Int32;
+  t: TCanvas;
 begin
   if DrawMode = fitPerfect then
-    self.CopyRect(Bounds, BMP.GetCanvas, [0,0,BMP.GetWidth-1,BMP.GetHeight-1])
+    self.CopyRect(Bounds, Pic.GetBitmap.GetCanvas,[0,0,Pic.GetWidth-1,Pic.GetHeight-1])
   else
   begin
-    TMP.Init();
-    TMP.Assign(BMP);
-
-    newW := Min(Bounds.Width, BMP.GetWidth);
-    newH := Min(Bounds.Height, BMP.GetHeight);
+    newW := Min(Bounds.Width, Pic.GetWidth);
+    newH := Min(Bounds.Height, Pic.GetHeight);
     Bounds := [Bounds.Left, Bounds.Top, Bounds.Left+newW-1, Bounds.Top+newH-1];
 
-    Self.CopyRect(Bounds, TMP.GetCanvas, [0,0, newW-1, newH-1]);
-    TMP.Free();
+    Self.CopyRect(Bounds, Pic.GetBitmap.GetCanvas, [0,0, newW-1, newH-1]);
   end;
-end;
+end; 
 
 procedure TCanvas.DrawSolidRect(B:TRect; color:Int32); constref;
 begin
