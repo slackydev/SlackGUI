@@ -139,7 +139,11 @@ var i:Int32;
 begin
   Obj^.RenderProc(Obj);
   for i:=0 to High(Obj^.Children) do
+  begin
     RenderFrom(Obj^.Children[i]);
+    Wait(0);
+  end;
+  Wait(1);
 end;
 
 procedure TSlackGUI.Render(_,Sender:TObject); static;

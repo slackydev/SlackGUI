@@ -215,7 +215,7 @@ begin
   with SlackGUI.Timer do
   begin
     SlackGUI.Timer.SetOnTimer(@TSlackGUI.Render);
-    SlackGUI.Timer.SetInterval(16);
+    SlackGUI.Timer.SetInterval(32);
   end;
 
   SlackGUI.Timer.SetEnabled(True);
