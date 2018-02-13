@@ -143,7 +143,6 @@ begin
     RenderFrom(Obj^.Children[i]);
     Wait(0);
   end;
-  Wait(1);
 end;
 
 procedure TSlackGUI.Render(_,Sender:TObject); static;
