@@ -29,12 +29,13 @@ type
 var
   SlackGUI: TSlackGUI;
 
+{$IFNDEF CODEINSIGHT}
 begin
   SlackGUI.Width   := 800;
   SlackGUI.Height  := 600;
   SlackGUI.Palette := DARK_NEUTRAL;
 end;
-
+{$ENDIF}
 
 {$I callbacks.pas}
 {$I object.pas}
@@ -52,6 +53,9 @@ var
   tmp: TFormObject;
 begin
   Result := nil;
+  if not Obj^.IsVisible then
+    Exit;
+
   if PointInBox(Point(X,Y), TBox(obj.Bounds)) then
     Result := Obj;
 
@@ -127,10 +131,42 @@ begin
   end;
 end;
 
+procedure TSlackGUI.ProcessKeyDownEvent(_, Sender: TObject; var Key: Word; Shift: TShiftState); static;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+    SlackGUI.FocusObject := SlackGUI.Objects[0];
+
+  if (@SlackGUI.FocusObject^.__OnKeyDown <> nil) then
+    SlackGUI.FocusObject^.__OnKeyDown(SlackGUI.FocusObject, Key, Shift);
+end;
+
+procedure TSlackGUI.ProcessKeyUpEvent(_, Sender: TObject; var Key: Word; Shift: TShiftState); static;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+    SlackGUI.FocusObject := SlackGUI.Objects[0];
+
+  if (@SlackGUI.FocusObject^.__OnKeyUp <> nil) then
+    SlackGUI.FocusObject^.__OnKeyUp(SlackGUI.FocusObject, Key, Shift);
+end;
+
+procedure TSlackGUI.ProcessKeyPressEvent(_, Sender: TObject; var Key: Char); static;
+begin
+  if (SlackGUI.ObjectCount <= 0) then Exit;
+
+  if (SlackGUI.FocusObject = nil) then
+    SlackGUI.FocusObject := SlackGUI.Objects[0];
+
+  if (@SlackGUI.FocusObject^.__OnKeyPress <> nil) then
+    SlackGUI.FocusObject^.__OnKeyPress(SlackGUI.FocusObject, Key);
+end;
 
 // -----------------------------------------------------------------------------
 // GUI
-function TSlackGUI.AddObject(NewObj: TFormObject): TFormObject;
+function TSlackGUI.Add(NewObj: TFormObject): TFormObject;
 begin
   Objects[ObjectCount] := NewObj;
   Objects[ObjectCount]^.Index := ObjectCount;
@@ -195,8 +231,11 @@ begin
     GetConstraints().SetMaxHeight(SlackGUI.Height);
     GetConstraints().SetMinWidth(SlackGUI.Width);
     GetConstraints().SetMinHeight(SlackGUI.Height);
-
     SetPosition(poScreenCenter);
+
+    SetOnKeyPress(@TSlackGUI.ProcessKeyPressEvent);
+    SetOnKeyDown (@TSlackGUI.ProcessKeyDownEvent);
+    SetOnKeyUp   (@TSlackGUI.ProcessKeyUpEvent);
   end;
 
   SlackGUI.Image.Init(SlackGUI.Form);

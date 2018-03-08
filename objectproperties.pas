@@ -117,10 +117,15 @@ begin
   begin
     if (parent <> nil) then
     begin
-      Result.Left   := Max(0, parent.Bounds.Left   + Result.Left);
-      Result.Top    := Max(0, parent.Bounds.Top    + Result.Top);
-      Result.Right  := Max(0, parent.Bounds.Right  + Result.Right);
-      Result.Bottom := Max(0, parent.Bounds.Bottom + Result.Bottom);
+      if (Result.Left< 0) then Result.Left := Max(0, parent.Bounds.Right  + Result.Left)
+      else                     Result.Left := Max(0, parent.Bounds.Left   + Result.Left);
+      if (Result.Top < 0) then Result.Top  := Max(0, parent.Bounds.Bottom + Result.Top)
+      else                     Result.Top  := Max(0, parent.Bounds.Top    + Result.Top);
+
+      if (Result.Right  <= 0) then Result.Right  := Max(0, parent.Bounds.Right  + Result.Right)
+      else                         Result.Right  := Max(0, parent.Bounds.Left   + Result.Right);
+      if (Result.Bottom <= 0) then Result.Bottom := Max(0, parent.Bounds.Bottom + Result.Bottom)
+      else                         Result.Bottom := Max(0, parent.Bounds.Top    + Result.Bottom);
     end else
     begin
       Result.Left   := Max(0, Result.Left);
@@ -158,7 +163,6 @@ begin
     
     if Result.Right  > b.Right - p.Right  then Result.Right  := b.Right-p.Right;
     if Result.Bottom > b.Bottom- p.Bottom then Result.Bottom := b.Bottom-p.Bottom;
-    
   end;
 end; 
 

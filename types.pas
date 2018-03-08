@@ -1,6 +1,7 @@
 type
   EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otBlock, otInputArea);
   EFitImageMode   = (fitNone, fitPerfect, fitOverflow);
+  ETextWrap       = (txtOverflow, txtWrap);
   EBoundsPosition = (bpInherited, bpAbsolute, bpRelative);
 
   TSize2D = record Wid, Hei: Int32; end;
@@ -10,6 +11,7 @@ type
   TMouseEvt     = procedure(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32);
   TMouseMoveEvt = procedure(Sender: TFormObject; Shift: TShiftState; X,Y: Int32);
   TKeyEvt       = procedure(Sender: TFormObject; Key: Word; Shift: TShiftState);
+  TKeyPressEvt  = procedure(Sender: TFormObject; Key: Char);
   TNotifyEvt    = procedure(Sender: TFormObject);
 
   TStyleSet = packed record
@@ -26,10 +28,7 @@ type
     FontName:  ShortString;
 
     Padding: TRect;
-    
-    TextWrap: Boolean;
-    Overflow: Boolean;
-
+    TextWrap: ETextWrap;
     Align: TAlign;
   end;
 
@@ -41,8 +40,11 @@ type
 
     Name: String;
     Bounds: TRect;
+    MaxSize: TSize2D;
+
     Position: EBoundsPosition;
     Styles, Styles2, Styles3: TStyleSet;
+    IsVisible: Boolean;
 
     RenderProc:  procedure(obj: TFormObject);
 
@@ -52,6 +54,7 @@ type
     __OnMouseMove,  OnMouseMove: TMouseMoveEvt;
     __OnKeyDown,    OnKeyDown:   TKeyEvt;
     __OnKeyUp,      OnKeyUp:     TKeyEvt;
+    __OnKeyPress,   OnKeyPress:  TKeyPressEvt;
 
     __OnMouseEnter, OnMouseEnter: TNotifyEvt;
     __OnMouseLeave, OnMouseLeave: TNotifyEvt;

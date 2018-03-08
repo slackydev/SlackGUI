@@ -39,6 +39,7 @@ begin
   This^.__OnMouseUp   := @TSlackGUI.OnMouseUp;
   This^.__OnKeyDown   := @TSlackGUI.OnKeyDown;
   This^.__OnKeyUp     := @TSlackGUI.OnKeyUp;
+  This^.__OnKeyPress  := @TSlackGUI.OnKeyPress;
   This^.__OnMouseEnter:= @TSlackGUI.OnMouseEnter;
   This^.__OnMouseLeave:= @TSlackGUI.OnMouseLeave;
   This^.__OnClick     := @TSlackGUI.OnClick;
@@ -50,6 +51,7 @@ begin
   Result^.Name   := Name;
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
+  Result^.IsVisible := True;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);
@@ -62,6 +64,7 @@ begin
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
   Result^.Typ    := otTitlebar;
+  Result^.IsVisible := True;
 
   DefaultCallbacks(Result);
   Result^.__OnMouseDown := @TSlackGUI.OnDragWindowStart;
@@ -76,6 +79,7 @@ begin
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
   Result^.Typ    := otText;
+  Result^.IsVisible := True;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);
@@ -88,6 +92,7 @@ begin
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
   Result^.Typ    := otButton;
+  Result^.IsVisible := True;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);
@@ -103,7 +108,8 @@ begin
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
   Result^.Typ    := otCheckbox;
-  
+  Result^.IsVisible := True;
+
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);
 
@@ -119,6 +125,7 @@ begin
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
   Result^.Typ    := otBlock;
+  Result^.IsVisible := True;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);

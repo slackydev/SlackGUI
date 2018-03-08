@@ -32,6 +32,11 @@ begin
   if (@Sender^.OnKeyUp <> nil) then Sender^.OnKeyUp(Sender, Key, Shift);
 end;
 
+procedure TSlackGUI.OnKeyPress(Sender: TFormObject; Key: Char); static;
+begin
+  if (@Sender^.OnKeyPress <> nil) then Sender^.OnKeyPress(Sender, Key);
+end;
+
 procedure TSlackGUI.OnMouseEnter(Sender: TFormObject); static;
 begin
   if (@Sender^.OnMouseEnter <> nil) then Sender^.OnMouseEnter(Sender);
