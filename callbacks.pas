@@ -22,17 +22,17 @@ begin
   if (@Sender^.OnMouseMove <> nil) then Sender^.OnMouseMove(Sender, Shift, X,Y);
 end;
 
-procedure TSlackGUI.OnKeyDown(Sender: TFormObject; Key: Word; Shift: TShiftState); static;
+procedure TSlackGUI.OnKeyDown(Sender: TFormObject; var Key: Word; Shift: TShiftState); static;
 begin
   if (@Sender^.OnKeyDown <> nil) then Sender^.OnKeyDown(Sender, Key, Shift);
 end;
 
-procedure TSlackGUI.OnKeyUp(Sender: TFormObject; Key: Word; Shift: TShiftState); static;
+procedure TSlackGUI.OnKeyUp(Sender: TFormObject; var Key: Word; Shift: TShiftState); static;
 begin
   if (@Sender^.OnKeyUp <> nil) then Sender^.OnKeyUp(Sender, Key, Shift);
 end;
 
-procedure TSlackGUI.OnKeyPress(Sender: TFormObject; Key: Char); static;
+procedure TSlackGUI.OnKeyPress(Sender: TFormObject; var Key: Char); static;
 begin
   if (@Sender^.OnKeyPress <> nil) then Sender^.OnKeyPress(Sender, Key);
 end;
@@ -50,6 +50,44 @@ end;
 procedure TSlackGUI.OnClick(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
 begin
   if (@Sender^.OnClick <> nil) then Sender^.OnClick(Sender, Button, Shift, X,Y);
+end;
+
+// ----------------------------------------------------------------------------
+// TITLEBAR
+procedure TSlackGUI.OnDragWindowStart(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  TTitlebarObject(Sender)^.IsDragging := True;
+  TTitlebarObject(Sender)^.DragStartX := X;
+  TTitlebarObject(Sender)^.DragStartY := Y;
+
+  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnDragWindow(Sender: TFormObject; Shift: TShiftState; X,Y: Int32); static;
+var
+  R: TRect;
+begin
+  with TTitlebarObject(Sender)^ do
+    if IsDragging then
+    begin
+      R := SlackGUI.Form.GetBoundsRect;
+      R.Left   += X-DragStartX;
+      R.Top    += Y-DragStartY;
+      R.Right  += X-DragStartX;
+      R.Bottom += Y-DragStartY;
+      SlackGUI.Form.SetBoundsRect(R);
+    end;
+
+  if (@Sender^.OnMouseMove <> nil) then Sender^.OnMouseMove(Sender, Shift, X,Y);
+end;
+
+procedure TSlackGUI.OnDragWindowStop(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+begin
+  TTitlebarObject(Sender)^.IsDragging := False;
+  TTitlebarObject(Sender)^.DragStartX := 0;
+  TTitlebarObject(Sender)^.DragStartY := 0;
+
+  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
 end;
 
 
@@ -90,39 +128,16 @@ end;
 
 
 // ----------------------------------------------------------------------------
-// TITLEBAR
-procedure TSlackGUI.OnDragWindowStart(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
+// TEXTFIELD
+procedure TSlackGUI.OnInputFieldPressKey(Sender: TFormObject; var Key: Char); static;
 begin
-  TTitlebarObject(Sender)^.IsDragging := True;
-  TTitlebarObject(Sender)^.DragStartX := X;
-  TTitlebarObject(Sender)^.DragStartY := Y;
+  if (@Sender^.OnKeyPress <> nil) then Sender^.OnKeyPress(Sender, Key);
 
-  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
-end;
-
-procedure TSlackGUI.OnDragWindow(Sender: TFormObject; Shift: TShiftState; X,Y: Int32); static;
-var
-  R: TRect;
-begin
-  with TTitlebarObject(Sender)^ do
-    if IsDragging then
-    begin
-      R := SlackGUI.Form.GetBoundsRect;
-      R.Left   += X-DragStartX;
-      R.Top    += Y-DragStartY;
-      R.Right  += X-DragStartX;
-      R.Bottom += Y-DragStartY;
-      SlackGUI.Form.SetBoundsRect(R);
-    end;
-
-  if (@Sender^.OnMouseMove <> nil) then Sender^.OnMouseMove(Sender, Shift, X,Y);
-end;
-
-procedure TSlackGUI.OnDragWindowStop(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
-begin
-  TTitlebarObject(Sender)^.IsDragging := False;
-  TTitlebarObject(Sender)^.DragStartX := 0;
-  TTitlebarObject(Sender)^.DragStartY := 0;
-
-  if (@Sender^.OnMouseUp <> nil) then Sender^.OnMouseUp(Sender, Button, Shift, X,Y);
+  with TInputFieldObject(Sender)^ do
+  begin
+    if (Ord(Key) = VK_BACK) then
+      SetLength(Text, Max(0,Length(Text)-1))
+    else if (Key <> #0) then
+      Text += Key;
+  end;
 end;

@@ -78,14 +78,14 @@ begin
   SlackGUI.RenderTextAt(FObject, Bounds.Left, Bounds.Top);
 end;
 
-procedure TSlackGUI.RenderInputBlock(FObject: TFormObject); static;
+procedure TSlackGUI.RenderInputField(FObject: TFormObject); static;
 var
   Bounds: TRect;
   Size: TSize2D;
 begin
   SlackGUI.ApplyStyle(FObject.Styles);
-  Size.Wid := SlackGUI.Image.GetCanvas.TextWidth(TTextObject(FObject)^.Text);
-  Size.Hei := SlackGUI.Image.GetCanvas.TextHeight(TTextObject(FObject)^.Text);
+  Size.Wid := SlackGUI.Image.GetCanvas.TextWidth(TInputFieldObject(FObject)^.Text);
+  Size.Hei := SlackGUI.Image.GetCanvas.TextHeight(TInputFieldObject(FObject)^.Text);
   FObject.ReComputeSize(Size);
   //WriteLn(FObject.Styles.Background);
   SlackGUI.RenderBasicBlock(FObject);
@@ -94,9 +94,11 @@ begin
   Bounds.Pad(FObject^.Styles.Padding);
   SlackGUI.RenderTextAt(FObject, Bounds.Left, Bounds.Top);
 
-  if SlackGUI.FocusObject = FObject then
+  if (SlackGUI.FocusObject = FObject) and (GetTickCount() > TInputFieldObject(FObject)^.FCaretTick+1000) then
   begin
     SlackGUI.Image.GetCanvas.TextOut(Bounds.Left+Size.Wid, Bounds.Top, '|');
+    if (GetTickCount() > TInputFieldObject(FObject)^.FCaretTick+2000) then
+      TInputFieldObject(FObject)^.FCaretTick := GetTickCount();
   end;
 end;
 

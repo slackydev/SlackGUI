@@ -8,7 +8,8 @@ begin
     otCheckbox:   TCheckboxObject(This).SetDefaultStyles(); 
     otRadios:     This.SetDefaultStyles(); 
     otBlock:      TBlockObject(This).SetDefaultStyles();
-    otInputArea:  This.SetDefaultStyles(); 
+    otInputField: This.SetDefaultStyles();
+    otInputBox:   This.SetDefaultStyles();
   end;
   
   (*
@@ -85,6 +86,19 @@ begin
   DefaultCallbacks(Result);
 end;
 
+function BlockObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+begin
+  Result := AllocMem(SizeOf(TBlockObjectRec));
+  Result^.Name   := Name;
+  Result^.Bounds := Bounds;
+  Result^.Parent := Parent;
+  Result^.Typ    := otBlock;
+  Result^.IsVisible := True;
+
+  InheritStyles(Result, Parent);
+  DefaultCallbacks(Result);
+end;
+
 function ButtonObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
 begin
   Result := AllocMem(SizeOf(TButtonObjectRec));
@@ -118,15 +132,17 @@ begin
   Result^.__OnClick     := @TSlackGUI.OnCheckboxClick;
 end;
 
-function BlockObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
+function InputFieldObject(Name: String; Bounds: TRect=[]; Parent: TFormObject=nil): TFormObject;
 begin
-  Result := AllocMem(SizeOf(TBlockObjectRec));
+  Result := AllocMem(SizeOf(TInputFieldObjectRec));
   Result^.Name   := Name;
   Result^.Bounds := Bounds;
   Result^.Parent := Parent;
-  Result^.Typ    := otBlock;
+  Result^.Typ    := otInputField;
   Result^.IsVisible := True;
 
   InheritStyles(Result, Parent);
   DefaultCallbacks(Result);
+
+  Result^.__OnKeyPress := @TSlackGUI.OnInputFieldPressKey;
 end;

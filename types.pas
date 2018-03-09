@@ -1,5 +1,5 @@
 type
-  EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otBlock, otInputArea);
+  EFormObjectType = (otNone, otTitlebar, otText, otButton, otCheckbox, otRadios, otBlock, otInputField, otInputBox);
   EFitImageMode   = (fitNone, fitPerfect, fitOverflow);
   ETextWrap       = (txtOverflow, txtWrap);
   EBoundsPosition = (bpInherited, bpAbsolute, bpRelative);
@@ -10,8 +10,8 @@ type
   
   TMouseEvt     = procedure(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32);
   TMouseMoveEvt = procedure(Sender: TFormObject; Shift: TShiftState; X,Y: Int32);
-  TKeyEvt       = procedure(Sender: TFormObject; Key: Word; Shift: TShiftState);
-  TKeyPressEvt  = procedure(Sender: TFormObject; Key: Char);
+  TKeyEvt       = procedure(Sender: TFormObject; var Key: Word; Shift: TShiftState);
+  TKeyPressEvt  = procedure(Sender: TFormObject; var Key: Char);
   TNotifyEvt    = procedure(Sender: TFormObject);
 
   TStyleSet = packed record
@@ -65,6 +65,9 @@ type
   TTextObjectRec = record(TFormObjectRec)
     Text: UnicodeString;
   end;
+
+  TBlockObject = ^TBlockObjectRec;
+  TBlockObjectRec = type TTextObjectRec;
   
   TTitlebarObject = ^TTitlebarObjectRec;
   TTitlebarObjectRec = record(TTextObjectRec)
@@ -82,9 +85,12 @@ type
     IsChecked: Boolean;
   end;
 
-  TBlockObject = ^TBlockObjectRec;
-  TBlockObjectRec = type TTextObjectRec;
-
+  TInputFieldObject = ^TInputFieldObjectRec;
+  TInputFieldObjectRec = record(TFormObjectRec)
+    Text: UnicodeString;
+    Caret: Int32;
+    FCaretTick: UInt32;
+  end;
   
 
 

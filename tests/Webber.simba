@@ -55,6 +55,14 @@ begin
   Result += ']';
 end;
 
+function GetValidIdent(ident: String): String;
+var i: Int32;
+begin
+  for i:=1 to Length(ident) do
+    if (ident[i].IsAlphaNum()) or (ident[i] = '_') then
+      Result += ident[i];
+end;
+
 function LinesIntersect(p,q:array[0..1] of TPoint; out i:TPoint): Boolean;
 var
   dx,dy,d: TPoint;
@@ -374,9 +382,9 @@ end;
 procedure OnSaveSave(Sender: TFormObject; Button: TMouseButton; Shift: TShiftState; X,Y: Int32); static;
 var
   f: TFileStream;
-  s, name: String;
+  tmp, s, name: String;
   TSA: TStringArray;
-  i: Int32;
+  i,j: Int32;
 
   procedure SortTSA(var Arr: TStringArray);
   var i,j: Integer;
@@ -403,12 +411,16 @@ begin
   TSA  := TSA[High(TSA)].Explode('\');
   name := TSA[High(TSA)];
   name := Capitalize(name.FileName) + Capitalize(name.FileExt());
-  name := Replace(name, '-','_', [rfReplaceAll]);
+  name := GetValidIdent(Replace(name, '-','_', [rfReplaceAll]));
 
   TSA := [];
   for i:=0 to High(Graph.Names) do
     if Graph.Names[i] <> '' then
-      TSA += Format('  loc%-30s := %s;', [Replace(Graph.Names[i],' ','',[rfReplaceAll])+': TPoint', ToStr(NodesNoZoom[i])]);
+    begin
+      tmp := GetValidIdent(Graph.Names[i]);
+      if Length(tmp) > 0 then
+        TSA += Format('  loc%-30s := %s;', [tmp+': TPoint', ToStr(NodesNoZoom[i])]);
+    end;
   SortTSA(TSA);
 
   s := '// World Web Generated With SlackGUI - Webber:' + LineEnding;
@@ -437,16 +449,15 @@ begin
   SaveScreen^.IsVisible := False;
 end;
 
-procedure OnSaveWrite(Sender: TFormObject; Key: Char); static;
+procedure OnSaveWrite(Sender: TFormObject; var Key: Char); static;
 begin
-  with TTextObject(Sender)^ do
+  with TInputFieldObject(Sender)^ do
   begin
-    if Ord(Key) = VK_BACK then
-      SetLength(Text, Max(0,Length(Text)-1))
-    else
-      Text += Key;
+    if (Key in ['<','>',':','"','|','?','*']) then
+      Key := #0;
 
-    TmpFileName := Text;
+    if Ord(Key) <> VK_BACK then
+      TmpFileName := Text + Key;
   end;
 end;
 
@@ -530,6 +541,7 @@ begin
 
   NodesNoZoom := Copy(Graph.Nodes);
   InFocus     := High(Graph.Nodes);
+  NodeCount   := Length(Graph.Nodes);
 
   LoadScreen^.IsVisible := False;
   MapNeedsUpdate := True;
@@ -540,16 +552,15 @@ begin
   LoadScreen^.IsVisible := False;
 end;
 
-procedure OnLoadWrite(Sender: TFormObject; Key: Char); static;
+procedure OnLoadWrite(Sender: TFormObject; var Key: Char); static;
 begin
-  with TTextObject(Sender)^ do
+  with TInputFieldObject(Sender)^ do
   begin
-    if Ord(Key) = VK_BACK then
-      SetLength(Text, Max(0,Length(Text)-1))
-    else
-      Text += Key;
+    if (Key in ['<','>',':','"','|','?','*']) then
+      Key := #0;
 
-    TmpFileName := Text;
+    if Ord(Key) <> VK_BACK then
+      TmpFileName := Text + Key;
   end;
 end;
 
@@ -596,16 +607,12 @@ begin
   WriteLn(#13#10);
 end;
 
-procedure OnUpdateNodeName(Sender: TFormObject; Key: Char); static;
+procedure OnUpdateNodeName(Sender: TFormObject; var Key: Char); static;
 begin
-  with TTextObject(Sender)^ do
+  with TInputFieldObject(Sender)^ do
   begin
-    if Ord(Key) = VK_BACK then
-      SetLength(Text, Max(0,Length(Text)-1))
-    else
-      Text += Key;
-
-    Graph.Names[InFocus] := Text;
+    if Ord(Key) <> VK_BACK then
+      Graph.Names[InFocus] := Text + Key;
   end;
 end;
 
@@ -947,9 +954,9 @@ begin
     Styles.BorderSize  := 0;
     Styles.Padding     := [];
 
-    with TTextObject(SlackGUI.Add(TextObject('Save->Text', [10,10,-120,-10], SaveScreen)))^ do
+    with TInputFieldObject(SlackGUI.Add(InputFieldObject('Save->Text', [10,10,-120,-10], SaveScreen)))^ do
     begin
-      RenderProc := @RenderInputBlock;
+      RenderProc := @RenderInputField;
       Position   := bpRelative;
       Styles.BorderColor := SlackGUI.Palette[clBorder1];
       Styles.BorderSize  := 1;
@@ -996,9 +1003,9 @@ begin
     Styles.BorderSize  := 0;
     Styles.Padding     := [];
 
-    with TTextObject(SlackGUI.Add(TextObject('Load->Text', [10,10,-120,-10], LoadScreen)))^ do
+    with TInputFieldObject(SlackGUI.Add(InputFieldObject('Load->Text', [10,10,-120,-10], LoadScreen)))^ do
     begin
-      RenderProc := @RenderInputBlock;
+      RenderProc := @RenderInputField;
       Position   := bpRelative;
       Styles.BorderColor := SlackGUI.Palette[clBorder1];
       Styles.BorderSize  := 1;
@@ -1041,14 +1048,14 @@ begin
     Text := '[0, 0]';
   end;
 
-  with TTextObject(NodeName := SlackGUI.Add(TextObject('NODE', [65,H-26,300,H-5], TopObject)))^ do
+  with TInputFieldObject(NodeName := SlackGUI.Add(InputFieldObject('NODE', [65,H-26,300,H-5], TopObject)))^ do
   begin
-    RenderProc := @RenderInputBlock;
+    RenderProc := @RenderInputField;
     Styles.BorderColor := SlackGUI.Palette[clBorder1];
     Styles.BorderSize  := 1;
     Styles.Background  := SlackGUI.Palette[clBackground4];
     Styles.Padding     := [7,1,0,0];
-    Styles.FontStyle := [];
+    Styles.FontStyle   := [];
     Text := '';
     OnKeyPress := @OnUpdateNodeName;
   end;
